@@ -3,9 +3,31 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<windows.h>
+#include <string>
 using namespace std;
 /// <summary>
-/// 初始墙壁判定 待改进 
+/// 退出界面的函数 有待加入积分功能
+/// </summary>
+/// <param name="score">积分</param>
+void EndGame(int score)
+{
+	cleardevice();
+	FlushBatchDraw();
+	settextstyle(50, 30, _T("normal"));
+	outtextxy(120, 120, _T("游戏结束"));
+	outtextxy(120, 180, _T("您的得分：") + score);
+	outtextxy(600, 240, _T("按回车以退出"));
+	FlushBatchDraw();
+	int waitkey = 0;
+	while (waitkey != 13)
+	{
+		if (_kbhit())
+			waitkey = _getch();
+	}
+	exit(0);
+}
+/// <summary>
+/// 初始墙壁判定 待改进 关卡和难度？
 /// </summary>
 /// <param name="Mapp"></param>
 /// <param name="y"></param>
@@ -72,14 +94,14 @@ void InitialInterface(int Select)
 /// 对回车键的反应
 /// </summary>
 /// <param name="Select"></param>
-void ChangeRoom(int Select)
+void ChangeRoom(int Select, bool* p)
 {
 	cleardevice();
 	switch (Select)
 	{
-	case 1: 
+	case 1:
 	{
-
+		*p = true;
 	};break;
 	case 2:;break;
 	case 3:;break;
@@ -96,7 +118,7 @@ void ChangeRoom(int Select)
 /// 绘制画面 已测试
 /// </summary>
 /// <param name="array"></param>
-void Draw(int array[21][26])
+void Draw(int array[21][26],int score,int level)
 {
 	for (int y = 1;y < 21;y++)
 	{
@@ -106,28 +128,74 @@ void Draw(int array[21][26])
 			{
 			case 0:setlinecolor(WHITE);break;
 			case 1:setlinecolor(YELLOW);break;
-			case 2:setlinecolor(GREEN);break;
-			case 3:setlinecolor(RED);break;
-			case 4:setlinecolor(BLUE);break;
+			case 2:setlinecolor(RED);break;
+			case 3:setlinecolor(BLUE);break;
+			case 4:setlinecolor(DARKGRAY);break;
+			case 5:setlinecolor(MAGENTA);break;
 			}
-			rectangle(x*30, y*30, x*30+22, y * 30 + 22);
+			if (array[y][x] > 100)
+			{
+				setlinecolor(GREEN);
+			}
+			rectangle(x * 30, y * 30, x * 30 + 22, y * 30 + 22);
 		}
+	}
+	settextstyle(50, 30, _T("normal"));
+	outtextxy(800, 120, _T("关卡:"));
+	outtextxy(800, 180, _T("目前得分："	));
+}
+/// <summary>
+/// 核心算法 测试中
+/// </summary>
+/// <param name="Mapp"></param>
+/// <param name="num"></param>
+/// <param name="Map"></param>
+/// <param name="direction"></param>
+/// <param name="length"></param>
+/// <param name="head_x"></param>
+/// <param name="head_y"></param>
+void ControlSnake(int score, int Map[21][26], int direction, int* length, int* head_x, int* head_y)
+{
+	switch (direction)
+	{
+	case 1: *head_x++;break;
+	case 2: *head_y--;break;
+	case 3: *head_x--;break;
+	case 4: *head_y++;break;
+	}
+	if (Map[*head_y][*head_x] != 0)
+	{
+		if (Map[*head_y][*head_x] == 1 || Map[*head_y][*head_x] > 100)
+		{
+			EndGame(score);
+		}
+		else if (Map[*head_y][*head_x] == 2) *length++;
 	}
 }
 
 
 void main()
 {
-	int level, diffcult，score;//游戏关卡，游戏难度，游戏积分
+	struct Snake
+	{
+		int length;//蛇身长度
+		int head_x;//头位置
+		int head_y;//头位置
+		int direction;//蛇头方向,1234东北西南
+		bool knock;//检测是否碰撞
+	}snake = { 1,10,13,1,false };
+
+	int level, diffcult, score;/*游戏关卡，游戏难度，游戏积分*/score = 0;level = 1;diffcult = 1;//难度123对应easy normal hard
+	bool Startroom = false;//跳转用函数
 	initgraph(1280, 800);
 
-	int Map[21][26];//创建初始地图,值为0代表空地，1为墙壁，2为蛇身，3为物品，4为传送门；0白 1黄 2绿 3红 4蓝
-	int* Mapp;//地图指针
+	int Map[21][26];//创建初始地图,值为0代表空地，1为墙壁，2为食物，3为传送门，4为炸弹，5为毒草 大于100为蛇身；0白 1黄 2红 3蓝 4灰 5紫 >100绿
+	int* Mapp;/*地图指针*/bool* bp = &Startroom;
 	for (int y = 1;y < 21;y++)
 	{
 		for (int x = 1;x < 26;x++)
 		{
-			Mapp=&Map[y][x];
+			Mapp = &Map[y][x];
 			NewJudge(Mapp, y, x);
 		}
 	}
@@ -154,12 +222,22 @@ void main()
 			key = 0;
 		};  break;
 		case 27: exit(0);
-		case 13: {cleardevice();FlushBatchDraw();ChangeRoom(select), key = 0;};break;
+		case 13: {cleardevice();FlushBatchDraw();ChangeRoom(select, bp), key = 0;};break;
 		}
+		if (Startroom == true)break;
 		InitialInterface(select);
 		FlushBatchDraw();
 		Sleep(33);
 		EndBatchDraw();
 	}
+	cleardevice();
+	FlushBatchDraw();
+	EndBatchDraw();
+
+	BeginBatchDraw();
+
+
+
+
 	closegraph();                                // 关闭绘图屏幕
 }
